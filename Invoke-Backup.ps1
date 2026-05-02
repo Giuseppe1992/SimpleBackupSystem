@@ -1,7 +1,7 @@
 #requires -Version 7.0
 <#
 .SYNOPSIS
-  Filters documents/images from a OneDrive folder, zips them (preserving
+  Filters documents/images from a source folder, zips them (preserving
   subfolder structure) into %TEMP%, uploads the zip to Azure Blob Storage,
   and removes the local zip.
 

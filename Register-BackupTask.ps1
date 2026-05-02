@@ -224,7 +224,7 @@ try {
         -Trigger $trigger `
         -Settings $settings `
         -Principal $principal `
-        -Description 'Daily SimpleBackupSystem (SBS) backup of OneDrive documents to Azure Blob Storage.' | Out-Null
+        -Description 'Daily SimpleBackupSystem (SBS) backup of selected files to Azure Blob Storage.' | Out-Null
 
     Write-Log "Scheduled task '$TaskName' registered."
     Write-Log "  Daily at        : $time"

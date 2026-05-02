@@ -2,7 +2,7 @@
 
 Daily PowerShell 7 backup tool for Windows. It:
 
-- Scans a OneDrive folder (recursively) for document and image files.
+- Scans a folder (recursively) for document and image files.
 - Filters by extensions defined in `config.json`.
 - Builds a zip in `%TEMP%` named `Backup_yyyyMMdd_HHmmss.zip`, preserving
   the original subfolder structure inside the archive.
@@ -40,7 +40,7 @@ that you might need an elevated `pwsh`.
 ## Repository layout
 
 | Path | Purpose | Committed? |
-|---|---|---|
+| --- | --- | --- |
 | [Invoke-Backup.ps1](Invoke-Backup.ps1) | Backup logic: filter, zip, upload, cleanup | yes |
 | [Register-BackupTask.ps1](Register-BackupTask.ps1) | Registers the daily Scheduled Task | yes |
 | [Install-DevTools.ps1](Install-DevTools.ps1) | Installs `PSScriptAnalyzer` + `Pester` (dev only) | yes |
@@ -64,12 +64,21 @@ lives in `.env` (gitignored). Anything safe to share lives in `config.json`
 Copy `.env.example` to `.env` and fill in:
 
 ```dotenv
-SOURCE_FOLDER=C:\Users\you\OneDrive\Documents
+SOURCE_FOLDER=C:\Users\you\Documents
 STORAGE_ACCOUNT=yourstorageaccount
 SAS_TOKEN=?sv=2024-...&sig=...
 ```
 
 The leading `?` on the SAS token is optional.
+
+> **Cloud-synced source folders (OneDrive / iCloud / Dropbox / etc.)**
+> If `SOURCE_FOLDER` lives in a cloud folder with "Files-on-Demand"
+> enabled, online-only files (placeholder icons) are not physically on
+> disk. Reading them during backup forces a hydration that may be slow,
+> fail offline, or be skipped entirely. Before relying on the backup,
+> mark the source folder and all subfolders as **"Always keep on this
+> device"** (OneDrive: right-click → *Always keep on this device*).
+> Otherwise some files may not end up in the zip.
 
 ### `config.json` (committed)
 
