@@ -39,14 +39,18 @@ that you might need an elevated `pwsh`.
 
 ## Repository layout
 
-| File | Purpose | Committed? |
+| Path | Purpose | Committed? |
 |---|---|---|
 | [Invoke-Backup.ps1](Invoke-Backup.ps1) | Backup logic: filter, zip, upload, cleanup | yes |
 | [Register-BackupTask.ps1](Register-BackupTask.ps1) | Registers the daily Scheduled Task | yes |
+| [Install-DevTools.ps1](Install-DevTools.ps1) | Installs `PSScriptAnalyzer` + `Pester` (dev only) | yes |
+| [Invoke-Tests.ps1](Invoke-Tests.ps1) | Runs lint + Pester suite | yes |
+| [tests/](tests/) | Pester unit tests | yes |
+| [sample-source/](sample-source/) | Sample folder tree for smoke-testing the backup | yes |
 | [config.json](config.json) | Non-secret settings | yes |
 | [.env.example](.env.example) | Template for local `.env` | yes |
 | `.env` | Holds `SOURCE_FOLDER`, `STORAGE_ACCOUNT`, `SAS_TOKEN` | **no** (gitignored) |
-| `backup.log` | Per-run backup log | **no** (gitignored) |
+| `logs/` | Per-run backup logs (`backup_<timestamp>.log`) | **no** (gitignored) |
 | `setup.log` | `Register-BackupTask.ps1` log | **no** (gitignored) |
 
 ## Configuration
@@ -128,6 +132,7 @@ Get-ScheduledTask -TaskName SimpleBackupSystem | Get-ScheduledTaskInfo
 | `-TaskName` | `SimpleBackupSystem` | Name of the scheduled task |
 | `-WakeToRun` | off | Wake Windows from sleep at the scheduled time |
 | `-SkipPrereqs` | off | Skip the NuGet / `Az.Storage` install step |
+| `-EnableTaskHistory` | off | Turn on the system-wide Task Scheduler history event log so the History tab shows past results. Requires admin; safe to skip — the per-run files in `logs/` already capture run output. |
 
 Examples:
 
@@ -140,7 +145,19 @@ pwsh -File .\Register-BackupTask.ps1 -WakeToRun
 
 # Re-register without re-checking modules
 pwsh -File .\Register-BackupTask.ps1 -SkipPrereqs
+
+# Also enable Task Scheduler history (run from an elevated pwsh)
+pwsh -File .\Register-BackupTask.ps1 -WakeToRun -EnableTaskHistory
 ```
+
+### Invoke-Backup.ps1 parameters
+
+| Parameter | Default | Purpose |
+| --- | --- | --- |
+| `-ConfigPath` | `./config.json` | Path to `config.json` |
+| `-EnvPath` | `./.env` | Path to `.env` |
+| `-LogDirectory` | `./logs` | Directory for per-run log files |
+| `-LogRetentionDays` | `30` | Delete log files older than this many days at the start of each run. Pass `0` to disable pruning. |
 
 ## Behavior on missed runs and sleep
 
@@ -161,8 +178,34 @@ For sleep specifically:
 
 ## Logs
 
-Each run appends to `backup.log` in the project folder. On failure, the
-script exits non-zero so the Scheduled Task history shows the error.
+Each run writes its own file under `logs/`, named
+`backup_<yyyy-MM-dd_HH-mm-ss>.log`. At the start of every run, files older
+than `-LogRetentionDays` (default 30 days) are pruned. On failure the
+script exits non-zero so the Scheduled Task history shows the error
+(if you've enabled it via `-EnableTaskHistory`).
+
+## Development
+
+Unit tests live in [tests/](tests/) and use [Pester](https://pester.dev) 5+
+with [PSScriptAnalyzer](https://github.com/PowerShell/PSScriptAnalyzer)
+for lint.
+
+```powershell
+# Once per machine — installs PSScriptAnalyzer + Pester (CurrentUser scope)
+pwsh -File .\Install-DevTools.ps1
+
+# Run lint + all tests
+pwsh -File .\Invoke-Tests.ps1
+
+# Lint only / tests only
+pwsh -File .\Invoke-Tests.ps1 -SkipPester
+pwsh -File .\Invoke-Tests.ps1 -SkipAnalyzer
+```
+
+[sample-source/](sample-source/) is a pre-built folder tree (17 files at
+depths 0–3, mix of matching and non-matching extensions) you can point
+`SOURCE_FOLDER` at to smoke-test `Invoke-Backup.ps1` without touching real
+data.
 
 ## Removing the task
 
