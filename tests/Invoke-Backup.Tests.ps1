@@ -106,3 +106,55 @@ Describe 'Remove-OldLogs' {
         { Remove-OldLogs -Directory $script:logDir -RetentionDays 30 } | Should -Not -Throw
     }
 }
+
+Describe 'Test-PathExcluded' {
+    It 'returns false when no patterns are provided' {
+        Test-PathExcluded -RelativePath 'foo/bar.txt' -Patterns @() | Should -BeFalse
+    }
+
+    It 'returns false when patterns is null' {
+        Test-PathExcluded -RelativePath 'foo/bar.txt' -Patterns $null | Should -BeFalse
+    }
+
+    It 'matches a literal filename at any depth' {
+        Test-PathExcluded -RelativePath 'a/b/c/Thumbs.db' -Patterns @('Thumbs.db') | Should -BeTrue
+        Test-PathExcluded -RelativePath 'Thumbs.db'        -Patterns @('Thumbs.db') | Should -BeTrue
+    }
+
+    It 'is case-insensitive on filename match' {
+        Test-PathExcluded -RelativePath 'a/THUMBS.DB' -Patterns @('thumbs.db') | Should -BeTrue
+    }
+
+    It 'matches a wildcard filename pattern at any depth' {
+        Test-PathExcluded -RelativePath 'foo/draft.bak' -Patterns @('*.bak') | Should -BeTrue
+        Test-PathExcluded -RelativePath 'draft.bak'     -Patterns @('*.bak') | Should -BeTrue
+    }
+
+    It 'matches a path pattern with a slash' {
+        Test-PathExcluded -RelativePath 'build/output.log' -Patterns @('build/*') | Should -BeTrue
+    }
+
+    It 'matches a path pattern recursively (* spans separators)' {
+        Test-PathExcluded -RelativePath 'build/sub/deep/output.log' -Patterns @('build/*') | Should -BeTrue
+    }
+
+    It 'does not match a path pattern outside its prefix' {
+        Test-PathExcluded -RelativePath 'src/output.log' -Patterns @('build/*') | Should -BeFalse
+    }
+
+    It 'normalizes backslashes to forward slashes before matching' {
+        Test-PathExcluded -RelativePath 'build\output.log' -Patterns @('build/*') | Should -BeTrue
+    }
+
+    It 'returns true if any pattern in the list matches' {
+        Test-PathExcluded -RelativePath 'foo/Thumbs.db' -Patterns @('*.bak','Thumbs.db','build/*') | Should -BeTrue
+    }
+
+    It 'returns false if no pattern matches' {
+        Test-PathExcluded -RelativePath 'docs/readme.txt' -Patterns @('*.bak','Thumbs.db') | Should -BeFalse
+    }
+
+    It 'ignores empty pattern entries' {
+        Test-PathExcluded -RelativePath 'docs/readme.txt' -Patterns @('','*.bak') | Should -BeFalse
+    }
+}

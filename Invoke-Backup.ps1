@@ -65,6 +65,29 @@ function Remove-OldLogs {
         Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
+# Returns $true if a relative path matches any exclude pattern.
+# Patterns containing '/' are matched against the relative path (e.g. 'build/*');
+# patterns without '/' are matched against the leaf filename only (e.g. 'Thumbs.db' or '*.bak').
+# Wildcards: * (any chars) and ? (single char). Matching is case-insensitive.
+function Test-PathExcluded {
+    param(
+        [Parameter(Mandatory)][string]$RelativePath,
+        [string[]]$Patterns
+    )
+    if (-not $Patterns -or $Patterns.Count -eq 0) { return $false }
+    $rel = $RelativePath -replace '\\','/'
+    $name = Split-Path -Leaf $rel
+    foreach ($pattern in $Patterns) {
+        if ([string]::IsNullOrEmpty($pattern)) { continue }
+        if ($pattern.Contains('/')) {
+            if ($rel -like $pattern) { return $true }
+        } else {
+            if ($name -like $pattern) { return $true }
+        }
+    }
+    return $false
+}
+
 # Skip script body when dot-sourced (so tests can load the functions above)
 if ($MyInvocation.InvocationName -eq '.') { return }
 
@@ -118,6 +141,7 @@ try {
     if (-not (Test-Path -LiteralPath $source)) {
         throw "Source folder does not exist: $source"
     }
+    $sourceFull = (Resolve-Path -LiteralPath $source).Path.TrimEnd('\','/')
 
     if (-not (Get-Module -ListAvailable -Name Az.Storage)) {
         throw 'Az.Storage module not installed. Run: Install-Module Az.Storage -Scope CurrentUser'
@@ -131,10 +155,24 @@ try {
         [void]$extSet.Add($e)
     }
 
+    $excludePatterns = @()
+    if ($config.PSObject.Properties.Match('ExcludePatterns').Count -gt 0 -and $config.ExcludePatterns) {
+        $excludePatterns = @($config.ExcludePatterns)
+    }
+
     Write-Log "Scanning $source (recursive)"
-    $files = Get-ChildItem -LiteralPath $source -Recurse -File -ErrorAction SilentlyContinue |
-             Where-Object { $extSet.Contains($_.Extension) }
-    Write-Log "Matched $($files.Count) file(s)"
+    $extMatched = @(Get-ChildItem -LiteralPath $source -Recurse -File -ErrorAction SilentlyContinue |
+                    Where-Object { $extSet.Contains($_.Extension) })
+    $files = @($extMatched | Where-Object {
+        $rel = $_.FullName.Substring($sourceFull.Length).TrimStart('\','/')
+        -not (Test-PathExcluded -RelativePath $rel -Patterns $excludePatterns)
+    })
+    $excludedCount = $extMatched.Count - $files.Count
+    if ($excludePatterns.Count -gt 0) {
+        Write-Log "Matched $($files.Count) file(s); excluded by pattern: $excludedCount"
+    } else {
+        Write-Log "Matched $($files.Count) file(s)"
+    }
 
     if ($files.Count -eq 0) {
         Write-Log 'Nothing to back up. Exiting.' 'WARN'
@@ -149,7 +187,6 @@ try {
     Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-    $sourceFull = (Resolve-Path -LiteralPath $source).Path.TrimEnd('\','/')
     Write-Log "Creating zip: $zipPath"
     $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
     try {

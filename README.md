@@ -93,6 +93,26 @@ The leading `?` on the SAS token is optional.
 - `Container` — the Azure Blob container name.
 - `ScheduleTime` — `HH:mm` (24h) — when the daily task runs.
 - `FileExtensions` — included extensions (case-insensitive, dot-prefixed).
+- `ExcludePatterns` *(optional)* — glob patterns excluded even when their
+  extension matches `FileExtensions`. Patterns containing `/` are matched
+  against the relative path from `SourceFolder`; patterns without `/`
+  match against the leaf filename only. Wildcards: `*` (any chars) and
+  `?` (single char). Matching is case-insensitive.
+
+  Examples:
+
+  ```json
+  "ExcludePatterns": [
+    "*.bak",                 "// any .bak file"
+    "Thumbs.db",             "// Thumbs.db at any depth"
+    "build/*",               "// everything under top-level build/"
+    "*/.cache/*",            "// any path containing /.cache/"
+    "drafts/scratch.docx"    "// one specific file"
+  ]
+  ```
+
+  (JSON has no comment syntax — strip the `// ...` parts in your real
+  config.)
 
 The file also contains empty `SourceFolder`, `StorageAccount` and
 `SasToken` keys as optional fallbacks — see precedence below.
