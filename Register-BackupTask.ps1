@@ -40,6 +40,13 @@
 
 .PARAMETER SkipPrereqs
   Skip prerequisite installation. Use if you've already set up modules.
+
+.PARAMETER EnableTaskHistory
+  Enables the system-wide Task Scheduler History event log
+  ('Microsoft-Windows-TaskScheduler/Operational'), so the History tab in
+  Task Scheduler shows past run results. This is a global Windows setting
+  (off by default) and requires admin privileges. Once enabled it stays on
+  until disabled — you only need to pass this flag once.
 #>
 [CmdletBinding()]
 param(
@@ -49,7 +56,8 @@ param(
     [string]$ScriptPath = (Join-Path $PSScriptRoot 'Invoke-Backup.ps1'),
     [string]$LogPath    = (Join-Path $PSScriptRoot 'setup.log'),
     [switch]$WakeToRun,
-    [switch]$SkipPrereqs
+    [switch]$SkipPrereqs,
+    [switch]$EnableTaskHistory
 )
 
 $ErrorActionPreference = 'Stop'
@@ -225,6 +233,23 @@ try {
     Write-Log "  Container       : $($config.Container)"
     Write-Log "  StartWhenAvailable : true (catches up after missed runs)"
     Write-Log "  WakeToRun          : $([bool]$WakeToRun)"
+
+    if ($EnableTaskHistory) {
+        $logName = 'Microsoft-Windows-TaskScheduler/Operational'
+        if (-not (Test-IsAdmin)) {
+            Write-Log "-EnableTaskHistory requires admin. Run from an elevated pwsh or do it manually:" 'WARN'
+            Write-Log "  wevtutil set-log '$logName' /enabled:true" 'WARN'
+        } else {
+            try {
+                & wevtutil.exe set-log $logName /enabled:true
+                if ($LASTEXITCODE -ne 0) { throw "wevtutil exited with code $LASTEXITCODE" }
+                Write-Log "Task Scheduler history (Cronologia) enabled system-wide."
+            } catch {
+                Write-Log "Could not enable Task Scheduler history: $($_.Exception.Message)" 'WARN'
+            }
+        }
+    }
+
     Write-Log ''
     Write-Log "To remove later:  Unregister-ScheduledTask -TaskName $TaskName -Confirm:`$false"
 }
