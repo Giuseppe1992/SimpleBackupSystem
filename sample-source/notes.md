@@ -1,0 +1,1 @@
+This .md file should be IGNORED — .md is not in FileExtensions.

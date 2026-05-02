@@ -1,0 +1,1 @@
+Sample backup source for smoke-testing Invoke-Backup.ps1. Files with extensions in config.json::FileExtensions are included; others are filtered out.

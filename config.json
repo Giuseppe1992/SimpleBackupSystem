@@ -1,0 +1,17 @@
+{
+  "Container": "backup",
+  "ScheduleTime": "02:00",
+  "FileExtensions": [
+    ".pdf",
+    ".doc", ".docx",
+    ".xls", ".xlsx",
+    ".ppt", ".pptx",
+    ".txt", ".rtf", ".csv",
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".tif", ".heic", ".webp"
+  ],
+
+  "_comment": "SourceFolder, StorageAccount and SasToken belong in .env (see .env.example). The fields below are optional fallbacks used only if .env is missing the corresponding key.",
+  "SourceFolder": "",
+  "StorageAccount": "",
+  "SasToken": ""
+}

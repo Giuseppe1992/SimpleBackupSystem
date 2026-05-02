@@ -1,0 +1,41 @@
+# ─── Secrets ─────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Logs ────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Local zips (should normally only live in %TEMP%) ────────────────────
+*.zip
+
+# ─── Claude Code ─────────────────────────────────────────────────────────
+# Local, per-user Claude Code settings (machine-specific permissions, etc.)
+.claude/settings.local.json
+# Local-only project notes for Claude
+CLAUDE.local.md
+# Claude transcripts / state caches if any tool drops them here
+.claude/state/
+.claude/cache/
+
+# ─── Editors / IDEs ──────────────────────────────────────────────────────
+.vs/
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── OS junk ─────────────────────────────────────────────────────────────
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ─── PowerShell module restore (if any local install ever lands here) ────
+Modules/
